@@ -304,6 +304,7 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
         current.push(model.names[i]);
       }
     }
+    model.DBG_name_index = name_index;
 
     // Create the root object.
     let mujocoRoot = new THREE.Group();

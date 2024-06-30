@@ -10,7 +10,7 @@ import   load_mujoco        from '../dist/mujoco_wasm.js';
 const mujoco = await load_mujoco();
 
 // Set up Emscripten's Virtual File System
-var initialScene = "humanoid.xml";
+var initialScene = "humanoid_gym_v4.xml";
 mujoco.FS.mkdir('/working');
 mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
 mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("./examples/scenes/" + initialScene)).text());
@@ -23,6 +23,7 @@ export class MuJoCoDemo {
     this.model      = new mujoco.Model("/working/" + initialScene);
     this.state      = new mujoco.State(this.model);
     this.simulation = new mujoco.Simulation(this.model, this.state);
+    this.model.DBG_name_index = {}; // added by Daniel to store joint names in an easier to access format than model.names
 
     // Define Random State Variables
     this.params = { scene: initialScene, paused: false, help: false, ctrlnoiserate: 0.0, ctrlnoisestd: 0.0, keyframeNumber: 0 };
@@ -205,8 +206,30 @@ export class MuJoCoDemo {
       if (this.bodies[b]) {
         getPosition  (this.simulation.xpos , b, this.bodies[b].position);
         getQuaternion(this.simulation.xquat, b, this.bodies[b].quaternion);
+        // debug: print all body positions
+        console.log("Body", b, this.bodies[b].name, "Position", this.bodies[b].position);
         this.bodies[b].updateWorldMatrix();
       }
+    }
+
+    // Print joint name, pos and vel for each joint
+    for (let jidx = 0; jidx < this.model.njnt; jidx++) {
+      let jnt_name = "?";
+      if (this.model.name_jntadr[jidx] in this.model.DBG_name_index) {
+        jnt_name = this.model.DBG_name_index[this.model.name_jntadr[jidx]];
+      }
+      let jnt_pos = this.simulation.qpos[this.model.jnt_qposadr[jidx]];
+      let jnt_vel = this.simulation.qvel[this.model.jnt_dofadr[jidx]];
+      console.log("Joint", jidx, jnt_name, "Position", jnt_pos, "Velocity", jnt_vel);
+    }
+
+    // print actuator name and control value for each actuator
+    for (let i = 0; i < this.simulation.ctrl.length; i++) {
+      let actuator_name = "?";
+      if (this.model.name_actuatoradr[i] in this.model.DBG_name_index) {
+        actuator_name = this.model.DBG_name_index[this.model.name_actuatoradr[i]];
+      }
+      console.log("Actuator", i, actuator_name, "Control", this.simulation.ctrl[i]);
     }
 
     // Update light transforms.
