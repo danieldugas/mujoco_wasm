@@ -250,8 +250,8 @@ export class MuJoCoDemo {
     }
 
     // RL policy state, action
-    if (true) {
-      let target_xyz = [4.0, 4.0, 1.3];
+    if (!this.params["paused"]) {
+      let target_xyz = [14.0, 0.0, 1.3];
       let initial_z = 0.8; // from flagrun
       this.DBG_div_element.innerHTML = "";
 
@@ -321,6 +321,7 @@ export class MuJoCoDemo {
       obs.push(torso_rpy[0]);
       obs.push(torso_rpy[1]);
       // 34 Joint values (rel pos, rel vel)
+      let jnt_dbg = [];
       for (let jidx = 1; jidx < this.model.njnt; jidx++) { // joint 0 is root
         let jnt_name = "?";
         if (this.model.name_jntadr[jidx] in this.model.DBG_name_index) {
@@ -339,6 +340,7 @@ export class MuJoCoDemo {
         let jnt_rel_vel = 0.1 * jnt_vel;
         obs.push(jnt_rel_pos);
         obs.push(jnt_rel_vel);
+        jnt_dbg.push(jnt_name + " " + jnt_rel_pos.toFixed(2) + " " + jnt_rel_vel.toFixed(2));
       }
       // 2 feet contact values
       // we can't get contacts unfortunately so we just check if the feet are below a certain height
