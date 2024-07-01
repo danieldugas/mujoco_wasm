@@ -32,6 +32,60 @@ export function setupGUI(parentContext) {
     "Flag": "flag.xml", "Mug": "mug.xml", "Tendon": "model_with_tendon.xml"
   }).name('Example Scene').onChange(reload);
 
+  // Add a debug menu
+  const displayDebugMenu = () => {
+    if (parentContext.params.debug) {
+      const debugMenu = document.createElement('div');
+      debugMenu.style.position = 'absolute';
+      debugMenu.style.top = '10px';
+      debugMenu.style.left = '10px';
+      debugMenu.style.color = 'white';
+      debugMenu.style.font = 'normal 18px Arial';
+      debugMenu.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+      debugMenu.style.padding = '10px';
+      debugMenu.style.borderRadius = '10px';
+      debugMenu.style.display = 'flex';
+      debugMenu.style.flexDirection = 'column';
+      debugMenu.style.alignItems = 'center';
+      debugMenu.style.justifyContent = 'center';
+      debugMenu.style.width = '400px';
+      debugMenu.style.height = '400px';
+      debugMenu.style.overflow = 'auto';
+      debugMenu.style.zIndex = '1000';
+
+      const debugMenuTitle = document.createElement('div');
+      debugMenuTitle.style.font = 'bold 24px Arial';
+      debugMenuTitle.innerHTML = 'Debug Menu';
+      debugMenu.appendChild(debugMenuTitle);
+
+      debugMenu.appendChild(parentContext.DBG_div_element);
+      
+      // close button
+      const debugMenuCloseButton = document.createElement('button');
+      debugMenuCloseButton.innerHTML = 'Close';
+      debugMenuCloseButton.style.position = 'absolute';
+      debugMenuCloseButton.style.top = '10px';
+      debugMenuCloseButton.style.right = '10px';
+      debugMenuCloseButton.style.zIndex = '1001';
+      debugMenuCloseButton.onclick = () => {
+        debugMenu.remove();
+      }
+      debugMenu.appendChild(debugMenuCloseButton);
+
+      document.body.appendChild(debugMenu);
+    } else {
+      document.body.removeChild(document.body.lastChild);
+    }
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'F2') {
+      parentContext.params.debug = !parentContext.params.debug;
+      displayDebugMenu();
+      event.preventDefault();
+    }
+  });
+
+
   // Add a help menu.
   // Parameters:
   //  Name: "Help".
