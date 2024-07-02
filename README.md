@@ -28,6 +28,9 @@ This repo is a fork of @stillonearth 's starter repository, adding tons of funct
 
 **1. Install emscripten**
 
+latest version of emscripten (3.1.61) does **not** work
+tested version 3.1.37 as working
+
 **2. Build the mujoco_wasm Binary**
 
 On Linux, use:
