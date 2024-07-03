@@ -488,6 +488,50 @@ public:
   }
 
   // MJDATA_DEFINITIONS
+  int  ncon                   () const { return _state->ptr()->ncon; }
+  // contacts
+  // didn't work
+  // std::vector<mjContact> contact() const {
+  //       std::vector<mjContact> contacts(_state->ptr()->contact, _state->ptr()->contact + _state->ptr()->ncon);
+  //       return contacts;
+  // }
+  // didn't work either
+  // val contact() const {
+  //     std::vector<mjContact> contacts(_state->ptr()->contact, _state->ptr()->contact + _state->ptr()->ncon);
+  //     return emscripten::val::array(contacts);
+  // }
+  // works but only a single value. we want a js array of values
+  // val contact() const {
+  //   val entry = val::object();
+  //   entry.set(std::string("name"), std::string("A"));
+  //   entry.set(std::string("id"), 1);
+  //   entry.set(std::string("salary"), 100000);
+  //   return entry;
+  // }
+  val contact() const {
+    // several mjContact objects
+    mjContact *contacts = _state->ptr()->contact;
+    val arr = val::array();
+    for (int i = 0; i < _state->ptr()->ncon; i++) {
+      val entry = val::object();
+      // entry.set(std::string("dist"), contacts[i].dist);
+      // entry.set(std::string("pos"), contacts[i].pos);
+      // entry.set(std::string("frame"), contacts[i].frame);
+      // entry.set(std::string("includemargin"), contacts[i].includemargin);
+      // entry.set(std::string("friction"), contacts[i].friction);
+      // entry.set(std::string("solref"), contacts[i].solref);
+      // entry.set(std::string("solimp"), contacts[i].solimp);
+      // entry.set(std::string("mu"), contacts[i].mu);
+      // entry.set(std::string("H"), contacts[i].H);
+      // entry.set(std::string("dim"), contacts[i].dim);
+      entry.set(std::string("geom1"), contacts[i].geom1);
+      entry.set(std::string("geom2"), contacts[i].geom2);
+      // entry.set(std::string("exclude"), contacts[i].exclude);
+      // entry.set(std::string("efc_address"), contacts[i].efc_address);
+      arr.set(i, entry);
+    }
+    return arr;
+  }
   val  qpos                   () const { return val(typed_memory_view(_model->ptr()->nq              * 1        , _state->ptr()->qpos                   )); }
   val  qvel                   () const { return val(typed_memory_view(_model->ptr()->nv              * 1        , _state->ptr()->qvel                   )); }
   val  act                    () const { return val(typed_memory_view(_model->ptr()->na              * 1        , _state->ptr()->act                    )); }
@@ -1318,6 +1362,8 @@ EMSCRIPTEN_BINDINGS(mujoco_wasm) {
       .function("applyForce", &Simulation::applyForce)
       .function("applyPose" , &Simulation::applyPose )
       // MJDATA_BINDINGS
+      .property("contact"               , &Simulation::contact               )
+      .property("ncon"                  , &Simulation::ncon                  )
       .property("qpos"                  , &Simulation::qpos                  )
       .property("qvel"                  , &Simulation::qvel                  )
       .property("act"                   , &Simulation::act                   )
@@ -1610,5 +1656,6 @@ EMSCRIPTEN_BINDINGS(mujoco_wasm) {
       .field("disableflags"        , &mjOption::disableflags)      // bit flags for disabling standard features
       .field("enableflags"         , &mjOption::enableflags);      // bit flags for enabling optional features
 
-  register_vector<mjContact>("vector<mjContact>");
+  register_vector<mjContact>("mjContactVector");
+  // register_vector<mjContact>("vector<mjContact>");
 }

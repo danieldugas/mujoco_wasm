@@ -300,7 +300,6 @@ export class MuJoCoDemo {
       }
       this.DBG_div_element.innerHTML += "vx: " + torso_vel[0].toFixed(2) + "<br>vy: " + torso_vel[1].toFixed(2) + "<br>vz: " + torso_vel[2].toFixed(2);
       this.DBG_div_element.innerHTML += "<br>roll: " + torso_rpy[0].toFixed(2) + "<br>pitch: " + torso_rpy[1].toFixed(2) + "<br>yaw: " + torso_rpy[2].toFixed(2);
-      this.DBG_div_element.innerHTML += "<br>lfoot_z: " + lfoot_z.toFixed(2) + "<br>rfoot_z: " + rfoot_z.toFixed(2);
       let target_theta = Math.atan2(target_xyz[1] - torso_xyz[1], target_xyz[0] - torso_xyz[0]);
       let target_dist  = Math.sqrt((target_xyz[1] - torso_xyz[1]) ** 2 + (target_xyz[0] - torso_xyz[0]) ** 2);
       let angle_to_target = target_theta - torso_rpy[2];
@@ -343,9 +342,24 @@ export class MuJoCoDemo {
         jnt_dbg.push(jnt_name + " " + jnt_rel_pos.toFixed(2) + " " + jnt_rel_vel.toFixed(2));
       }
       // 2 feet contact values
-      // we can't get contacts unfortunately so we just check if the feet are below a certain height
-      obs.push(rfoot_z < 0.05 ? 1 : 0);
-      obs.push(lfoot_z < 0.05 ? 1 : 0);
+      // this.simulation.contact;
+      let is_left_foot_contact = 0;
+      let is_right_foot_contact = 0;
+      for (let i = 0; i < this.simulation.contact.length; i++) {
+        let contact = this.simulation.contact[i];
+        let geom1 = this.model.DBG_name_index[this.model.name_geomadr[contact.geom1]];
+        let geom2 = this.model.DBG_name_index[this.model.name_geomadr[contact.geom2]];
+        if ((geom1 == "left_foot" || geom2 == "left_foot") && (geom1 == "floor" || geom2 == "floor")) {
+          is_left_foot_contact = 1;
+        }
+        if ((geom1 == "right_foot" || geom2 == "right_foot") && (geom1 == "floor" || geom2 == "floor")) {
+          is_right_foot_contact = 1;
+        }
+        //console.log("Contact", i, "Geom1", geom1, "Geom2", geom2);
+      }
+      obs.push(is_right_foot_contact);
+      obs.push(is_left_foot_contact);
+      this.DBG_div_element.innerHTML += "<br>lfoot_contact: " + is_left_foot_contact + "<br>rfoot_contact: " + is_right_foot_contact;
       // clip obs to -5, 5
       obs = obs.map(x => Math.min(5, Math.max(-5, x)));
 
