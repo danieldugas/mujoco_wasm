@@ -263,6 +263,7 @@ export function setupGUI(parentContext) {
   // Add sliders for ctrlnoiserate and ctrlnoisestd; min = 0, max = 2, step = 0.01.
   simulationFolder.add(parentContext.params, 'ctrlnoiserate', 0.0, 2.0, 0.01).name('Noise rate' );
   simulationFolder.add(parentContext.params, 'ctrlnoisestd' , 0.0, 2.0, 0.01).name('Noise scale');
+  simulationFolder.add(parentContext.params, 'rlactscale' , 0.0, 5.0, 0.01).name('RL Action scale');
 
   let textDecoder = new TextDecoder("utf-8");
   let nullChar    = textDecoder.decode(new ArrayBuffer(1));
