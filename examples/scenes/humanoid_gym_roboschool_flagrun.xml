@@ -8,6 +8,7 @@
     <option integrator="RK4" iterations="50" solver="PGS" timestep="0.004125">
         <!-- <flags solverstat="enable" energy="enable"/>-->
     </option>
+    <!-- <option gravity="0 0 0"/> -->
     <size nkey="5" nuser_geom="1"/>
     <visual>
         <map fogend="5" fogstart="3"/>

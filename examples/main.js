@@ -15,7 +15,7 @@ var initialScene = "humanoid_gym_roboschool_flagrun.xml";
 var repeat_iter = 4;
 var ACTOBS_LOG = true;
 var ZEROACT = false;
-var ONEACT = true;
+var ONEACT = false;
 mujoco.FS.mkdir('/working');
 mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
 mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("./examples/scenes/" + initialScene)).text());
@@ -199,8 +199,6 @@ export class MuJoCoDemo {
           let torso_wxyz = [0.0, 0.0, 0.0, 0.0];
           let torso_rpy = [0.0, 0.0, 0.0];
           let torso_vel = [0.0, 0.0, 0.0];
-          let lfoot_z = 0.0;
-          let rfoot_z = 0.0;
           for (let b = 0; b < this.model.nbody; b++) {
             if (this.bodies[b]) {
               n += 1;
@@ -224,12 +222,6 @@ export class MuJoCoDemo {
                 torso_rpy[0] = euler.x;
                 torso_rpy[1] = euler.y;
                 torso_rpy[2] = euler.z;
-              }
-              if (this.bodies[b].name == "left_foot") {
-                lfoot_z = this.simulation.xpos[b*3+2];
-              }
-              if (this.bodies[b].name == "right_foot") {
-                rfoot_z = this.simulation.xpos[b*3+2];
               }
             }
           }
@@ -411,7 +403,7 @@ export class MuJoCoDemo {
         }
       }
 
-      this.simulation.forward();
+      // this.simulation.forward();
     }
 
     // Update body transforms.
