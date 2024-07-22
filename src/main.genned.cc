@@ -532,6 +532,7 @@ public:
     }
     return arr;
   }
+  mjtNum  time                   () const { return _state->ptr()->time; }
   val  qpos                   () const { return val(typed_memory_view(_model->ptr()->nq              * 1        , _state->ptr()->qpos                   )); }
   val  qvel                   () const { return val(typed_memory_view(_model->ptr()->nv              * 1        , _state->ptr()->qvel                   )); }
   val  act                    () const { return val(typed_memory_view(_model->ptr()->na              * 1        , _state->ptr()->act                    )); }
@@ -1364,6 +1365,7 @@ EMSCRIPTEN_BINDINGS(mujoco_wasm) {
       // MJDATA_BINDINGS
       .property("contact"               , &Simulation::contact               )
       .property("ncon"                  , &Simulation::ncon                  )
+      .property("time"                  , &Simulation::time                  )
       .property("qpos"                  , &Simulation::qpos                  )
       .property("qvel"                  , &Simulation::qvel                  )
       .property("act"                   , &Simulation::act                   )

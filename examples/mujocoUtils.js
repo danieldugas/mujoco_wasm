@@ -7,6 +7,7 @@ export async function reloadFunc() {
   this.scene.remove(this.scene.getObjectByName("MuJoCo Root"));
   [this.model, this.state, this.simulation, this.bodies, this.lights] =
     await loadSceneFromURL(this.mujoco, this.params.scene, this);
+  this.set_mocap_keyframe();
   this.simulation.forward();
   for (let i = 0; i < this.updateGUICallbacks.length; i++) {
     this.updateGUICallbacks[i](this.model, this.simulation, this.params);
@@ -232,6 +233,7 @@ export function setupGUI(parentContext) {
   //  Can also be triggered by pressing backspace.
   const resetSimulation = () => {
     parentContext.simulation.resetData();
+    parentContext.set_mocap_keyframe();
     parentContext.simulation.forward();
   };
   simulationFolder.add({reset: () => { resetSimulation(); }}, 'reset').name('Reset');
