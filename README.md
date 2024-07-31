@@ -29,7 +29,16 @@ This repo is a fork of @stillonearth 's starter repository, adding tons of funct
 **1. Install emscripten**
 
 latest version of emscripten (3.1.61) does **not** work
-tested version 3.1.37 as working
+tested version 3.1.37 as working (https://emscripten.org/docs/getting_started/downloads.html)
+
+```bash
+# using my unmodified fork so it works forever
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install 3.1.37
+./emsdk activate 3.1.37
+source ./emsdk_env.sh
+```
 
 **2. Build the mujoco_wasm Binary**
 
