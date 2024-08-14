@@ -11,7 +11,7 @@ import { ExtractedPolicy } from './extracted_policy.js';
 // Load the MuJoCo Module
 const mujoco = await load_mujoco();
 
-var ENV = "DEEP_MIMIC_HUMANOID"
+var ENV = "DEEP_MIMIC_UNITREE_G1"
 // Set up Emscripten's Virtual File System
 var initialScene = "humanoid.xml";
 var repeat_iter = 1;
@@ -20,7 +20,10 @@ if (ENV == "FLAGRUN") {
   repeat_iter = 4;
 } else if (ENV == "DEEP_MIMIC_HUMANOID") {
   initialScene = "humanoid_deep_mimic.xml";
-  repeat_iter = 1; // Should be 6 but somehow 1 gives most accurate results
+  repeat_iter = 1;
+} else if (ENV == "DEEP_MIMIC_UNITREE_G1") {
+  initialScene = "deepmimic_unitree_g1.xml";
+  repeat_iter = 1;
 }
 var ACTOBS_LOG = false;
 var ZEROACT = false;
@@ -28,6 +31,59 @@ var ONEACT = false;
 mujoco.FS.mkdir('/working');
 mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
 mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("./examples/scenes/" + initialScene)).text());
+// load meshes
+mujoco.FS.mkdir('/working/assets');
+var mesh_names = [
+    "pelvis",
+    "pelvis_contour_link",
+    "left_hip_pitch_link",
+    "left_hip_roll_link",
+    "left_hip_yaw_link",
+    "left_knee_link",
+    "left_ankle_pitch_link",
+    "left_ankle_roll_link",
+    "right_hip_pitch_link",
+    "right_hip_roll_link",
+    "right_hip_yaw_link",
+    "right_knee_link",
+    "right_ankle_pitch_link",
+    "right_ankle_roll_link",
+    "torso_link",
+    "head_link",
+    "left_shoulder_pitch_link",
+    "left_shoulder_roll_link",
+    "left_shoulder_yaw_link",
+    "left_elbow_pitch_link",
+    "left_elbow_roll_link",
+    "right_shoulder_pitch_link",
+    "right_shoulder_roll_link",
+    "right_shoulder_yaw_link",
+    "right_elbow_pitch_link",
+    "right_elbow_roll_link",
+    "logo_link",
+    "left_palm_link",
+    "left_zero_link",
+    "left_one_link",
+    "left_two_link",
+    "left_three_link",
+    "left_four_link",
+    "left_five_link",
+    "left_six_link",
+    "right_palm_link",
+    "right_zero_link",
+    "right_one_link",
+    "right_two_link",
+    "right_three_link",
+    "right_four_link",
+    "right_five_link",
+    "right_six_link",
+]
+for (let i = 0; i < mesh_names.length; i++) {
+    mujoco.FS.writeFile("/working/assets/" + mesh_names[i] + ".obj", await(await fetch("./examples/scenes/assets/" + mesh_names[i] + ".obj")).text());
+    mujoco.FS.writeFile("/working/assets/" + mesh_names[i] + ".mtl", await(await fetch("./examples/scenes/assets/" + mesh_names[i] + ".mtl")).text());
+}
+// mujoco.FS.writeFile("/working/assets/" + "pelvis.obj", await(await fetch("./examples/scenes/assets/" + "pelvis.obj")).text());
+// mujoco.FS.writeFile("/working/assets/" + "pelvis_contour_link.obj", await(await fetch("./examples/scenes/assets/" + "pelvis_contour_link.obj")).text());
 
 export class MuJoCoDemo {
   constructor() {
@@ -214,210 +270,218 @@ export class MuJoCoDemo {
           console.log("Actuator", i, actuator_name, "Control", this.simulation.ctrl[i]);
         }
 
-        // RL policy state, action
-        if (is_initialized && !this.params["paused"]) {
-          let target_xyz = [14.0, 0.0, 1.3];
-          let initial_z = 0.8; // from flagrun
-          this.DBG_div_element.innerHTML = "";
-          let torso_name = "torso";
-          let lfoot_name = "left_foot";
-          let rfoot_name = "right_foot";
-          let floor_name = "floor";
-          if (ENV == "DEEP_MIMIC_HUMANOID") {
-            torso_name = "chest";
-            lfoot_name = "left_ankle";
-            rfoot_name = "right_ankle";
-          }
+        if (is_initialized) {
+            let aaaaaaa = 0;
 
-          // Get observation vector (see gym_forward_walker.py calc_state())
-          let obs = [];
-          // 8 Body pose, target values
-          let mean_xyz = [0.0, 0.0, 0.0];
-          let n = 0;
-          let torso_xyz = [0.0, 0.0, 0.0];
-          let torso_wxyz = [0.0, 0.0, 0.0, 0.0];
-          let torso_rpy = [0.0, 0.0, 0.0];
-          let torso_vel = [0.0, 0.0, 0.0];
-          let torso_rotvel = [0.0, 0.0, 0.0];
-          for (let b = 0; b < this.model.nbody; b++) {
-            if (this.bodies[b]) {
-              n += 1;
-              mean_xyz[0] += this.simulation.xpos[b*3+0];
-              mean_xyz[1] += this.simulation.xpos[b*3+1];
-              mean_xyz[2] += this.simulation.xpos[b*3+2];
-              if (this.bodies[b].name == torso_name) {
-                torso_xyz[0] = this.simulation.xpos[b*3+0];
-                torso_xyz[1] = this.simulation.xpos[b*3+1];
-                torso_xyz[2] = this.simulation.xpos[b*3+2];
-                torso_vel[0] = this.simulation.cvel[b*6+3];
-                torso_vel[1] = this.simulation.cvel[b*6+4];
-                torso_vel[2] = this.simulation.cvel[b*6+5];
-                torso_rotvel[0] = this.simulation.cvel[b*6+0];
-                torso_rotvel[1] = this.simulation.cvel[b*6+1];
-                torso_rotvel[2] = this.simulation.cvel[b*6+2];
-                torso_wxyz[0] = this.simulation.xquat[b*4+0];
-                torso_wxyz[1] = this.simulation.xquat[b*4+1];
-                torso_wxyz[2] = this.simulation.xquat[b*4+2];
-                torso_wxyz[3] = this.simulation.xquat[b*4+3];
-                let quat = new THREE.Quaternion(torso_wxyz[1], torso_wxyz[2], torso_wxyz[3], torso_wxyz[0]);
-                let euler = new THREE.Euler();
-                euler.setFromQuaternion(quat);
-                torso_rpy[0] = euler.x;
-                torso_rpy[1] = euler.y;
-                torso_rpy[2] = euler.z;
-              }
-            }
-          }
-          mean_xyz[0] /= n;
-          mean_xyz[1] /= n;
-          mean_xyz[2] /= n;
-          this.DBG_div_element.innerHTML += "vx: " + torso_vel[0].toFixed(2) + "<br>vy: " + torso_vel[1].toFixed(2) + "<br>vz: " + torso_vel[2].toFixed(2);
-          this.DBG_div_element.innerHTML += "<br>roll: " + torso_rpy[0].toFixed(2) + "<br>pitch: " + torso_rpy[1].toFixed(2) + "<br>yaw: " + torso_rpy[2].toFixed(2);
-          let target_theta = Math.atan2(target_xyz[1] - mean_xyz[1], target_xyz[0] - mean_xyz[0]);
-          let angle_to_target = target_theta - torso_rpy[2];
-          let rot_minus_yaw = [
-            [Math.cos(-torso_rpy[2]), -Math.sin(-torso_rpy[2]), 0],
-            [Math.sin(-torso_rpy[2]),  Math.cos(-torso_rpy[2]), 0],
-            [0, 0, 1]
-          ];
-          let vx = rot_minus_yaw[0][0] * torso_vel[0] + rot_minus_yaw[0][1] * torso_vel[1] + rot_minus_yaw[0][2] * torso_vel[2];
-          let vy = rot_minus_yaw[1][0] * torso_vel[0] + rot_minus_yaw[1][1] * torso_vel[1] + rot_minus_yaw[1][2] * torso_vel[2];
-          let vz = rot_minus_yaw[2][0] * torso_vel[0] + rot_minus_yaw[2][1] * torso_vel[1] + rot_minus_yaw[2][2] * torso_vel[2];
-          // 34 Joint values (rel pos, rel vel)
-          let jnt_dbg = [];
-          let qpos = [];
-          let qvel = [];
-          let qpos_rel = [];
-          for (let jidx = 1; jidx < this.model.njnt; jidx++) { // joint 0 is root
-            let jnt_name = "?";
-            if (this.model.name_jntadr[jidx] in this.model.DBG_name_index) {
-              jnt_name = this.model.DBG_name_index[this.model.name_jntadr[jidx]];
-            }
-            if (jnt_name == "root") {
-              continue;
-            }
-            let jnt_pos = this.simulation.qpos[this.model.jnt_qposadr[jidx]];
-            let jnt_vel = this.simulation.qvel[this.model.jnt_dofadr[jidx]];
-            let jnt_lower_lim = this.model.jnt_range[jidx*2];
-            let jnt_upper_lim = this.model.jnt_range[jidx*2+1];
-            // to joint observations (34,), assumes motor joints with 0 max vel
-            let jnt_mid_lim = (jnt_upper_lim + jnt_lower_lim) / 2;
-            let jnt_rel_pos = 2 * (jnt_pos - jnt_mid_lim) / (jnt_upper_lim - jnt_lower_lim);
-            qpos.push(jnt_pos);
-            qvel.push(jnt_vel);
-            qpos_rel.push(jnt_rel_pos);
-          }
-          // 2 feet contact values
-          // this.simulation.contact;
-          let is_left_foot_contact = 0;
-          let is_right_foot_contact = 0;
-          for (let i = 0; i < this.simulation.contact.length; i++) {
-            let contact = this.simulation.contact[i];
-            let geom1 = this.model.DBG_name_index[this.model.name_geomadr[contact.geom1]];
-            let geom2 = this.model.DBG_name_index[this.model.name_geomadr[contact.geom2]];
-            if ((geom1 == lfoot_name || geom2 == lfoot_name) && (geom1 == floor_name || geom2 == floor_name)) {
-              is_left_foot_contact = 1;
-            }
-            if ((geom1 == rfoot_name || geom2 == rfoot_name) && (geom1 == floor_name || geom2 == floor_name)) {
-              is_right_foot_contact = 1;
-            }
-            //console.log("Contact", i, "Geom1", geom1, "Geom2", geom2);
-          }
-          this.DBG_div_element.innerHTML += "<br>lfoot_contact: " + is_left_foot_contact + "<br>rfoot_contact: " + is_right_foot_contact;
+        }
 
-          if (ENV == "FLAGRUN") {
-            obs.push(torso_xyz[2] - initial_z);
-            obs.push(Math.sin(angle_to_target));
-            obs.push(Math.cos(angle_to_target));
-            obs.push(0.3 * vx);
-            obs.push(0.3 * vy);
-            obs.push(0.3 * vz);
-            obs.push(torso_rpy[0]);
-            obs.push(torso_rpy[1]);
-            for (let i = 0; i < qpos_rel.length; i++) {
-              obs.push(qpos_rel[i]);
-              obs.push(qvel[i] * 0.1);
-              jnt_dbg.push(jnt_name + " " + jnt_rel_pos.toFixed(2) + " " + jnt_rel_vel.toFixed(2));
+        if (false) {
+
+            // RL policy state, action
+            if (is_initialized && !this.params["paused"]) {
+            let target_xyz = [14.0, 0.0, 1.3];
+            let initial_z = 0.8; // from flagrun
+            this.DBG_div_element.innerHTML = "";
+            let torso_name = "torso";
+            let lfoot_name = "left_foot";
+            let rfoot_name = "right_foot";
+            let floor_name = "floor";
+            if (ENV == "DEEP_MIMIC_HUMANOID") {
+                torso_name = "chest";
+                lfoot_name = "left_ankle";
+                rfoot_name = "right_ankle";
             }
-            obs.push(is_right_foot_contact);
-            obs.push(is_left_foot_contact);
-            // clip obs to -5, 5
-            obs = obs.map(x => Math.min(5, Math.max(-5, x)));
-          } else if (ENV == "DEEP_MIMIC_HUMANOID") {
-            let S = 0.1;
-            for (let i = 0; i < qpos.length; i++) { obs.push(qpos[i]); }
-            for (let i = 0; i < qvel.length; i++) { obs.push(qvel[i] * S); }
-            // torso obs
-            obs.push(torso_rpy[0] * S);
-            obs.push(torso_rpy[1] * S);
-            obs.push(vx * S);
-            obs.push(vy * S);
-            obs.push(vz * S);
-            obs.push(torso_rotvel[0] * S);
-            obs.push(torso_rotvel[1] * S);
-            obs.push(torso_rotvel[2] * S);
-            // foot contacts
-            obs.push(is_right_foot_contact);
-            obs.push(is_left_foot_contact);
-          }
 
-          let a = this.policy.act(obs);
+            // Get observation vector (see gym_forward_walker.py calc_state())
+            let obs = [];
+            // 8 Body pose, target values
+            let mean_xyz = [0.0, 0.0, 0.0];
+            let n = 0;
+            let torso_xyz = [0.0, 0.0, 0.0];
+            let torso_wxyz = [0.0, 0.0, 0.0, 0.0];
+            let torso_rpy = [0.0, 0.0, 0.0];
+            let torso_vel = [0.0, 0.0, 0.0];
+            let torso_rotvel = [0.0, 0.0, 0.0];
+            for (let b = 0; b < this.model.nbody; b++) {
+                if (this.bodies[b]) {
+                n += 1;
+                mean_xyz[0] += this.simulation.xpos[b*3+0];
+                mean_xyz[1] += this.simulation.xpos[b*3+1];
+                mean_xyz[2] += this.simulation.xpos[b*3+2];
+                if (this.bodies[b].name == torso_name) {
+                    torso_xyz[0] = this.simulation.xpos[b*3+0];
+                    torso_xyz[1] = this.simulation.xpos[b*3+1];
+                    torso_xyz[2] = this.simulation.xpos[b*3+2];
+                    torso_vel[0] = this.simulation.cvel[b*6+3];
+                    torso_vel[1] = this.simulation.cvel[b*6+4];
+                    torso_vel[2] = this.simulation.cvel[b*6+5];
+                    torso_rotvel[0] = this.simulation.cvel[b*6+0];
+                    torso_rotvel[1] = this.simulation.cvel[b*6+1];
+                    torso_rotvel[2] = this.simulation.cvel[b*6+2];
+                    torso_wxyz[0] = this.simulation.xquat[b*4+0];
+                    torso_wxyz[1] = this.simulation.xquat[b*4+1];
+                    torso_wxyz[2] = this.simulation.xquat[b*4+2];
+                    torso_wxyz[3] = this.simulation.xquat[b*4+3];
+                    let quat = new THREE.Quaternion(torso_wxyz[1], torso_wxyz[2], torso_wxyz[3], torso_wxyz[0]);
+                    let euler = new THREE.Euler();
+                    euler.setFromQuaternion(quat);
+                    torso_rpy[0] = euler.x;
+                    torso_rpy[1] = euler.y;
+                    torso_rpy[2] = euler.z;
+                }
+                }
+            }
+            mean_xyz[0] /= n;
+            mean_xyz[1] /= n;
+            mean_xyz[2] /= n;
+            this.DBG_div_element.innerHTML += "vx: " + torso_vel[0].toFixed(2) + "<br>vy: " + torso_vel[1].toFixed(2) + "<br>vz: " + torso_vel[2].toFixed(2);
+            this.DBG_div_element.innerHTML += "<br>roll: " + torso_rpy[0].toFixed(2) + "<br>pitch: " + torso_rpy[1].toFixed(2) + "<br>yaw: " + torso_rpy[2].toFixed(2);
+            let target_theta = Math.atan2(target_xyz[1] - mean_xyz[1], target_xyz[0] - mean_xyz[0]);
+            let angle_to_target = target_theta - torso_rpy[2];
+            let rot_minus_yaw = [
+                [Math.cos(-torso_rpy[2]), -Math.sin(-torso_rpy[2]), 0],
+                [Math.sin(-torso_rpy[2]),  Math.cos(-torso_rpy[2]), 0],
+                [0, 0, 1]
+            ];
+            let vx = rot_minus_yaw[0][0] * torso_vel[0] + rot_minus_yaw[0][1] * torso_vel[1] + rot_minus_yaw[0][2] * torso_vel[2];
+            let vy = rot_minus_yaw[1][0] * torso_vel[0] + rot_minus_yaw[1][1] * torso_vel[1] + rot_minus_yaw[1][2] * torso_vel[2];
+            let vz = rot_minus_yaw[2][0] * torso_vel[0] + rot_minus_yaw[2][1] * torso_vel[1] + rot_minus_yaw[2][2] * torso_vel[2];
+            // 34 Joint values (rel pos, rel vel)
+            let jnt_dbg = [];
+            let qpos = [];
+            let qvel = [];
+            let qpos_rel = [];
+            for (let jidx = 1; jidx < this.model.njnt; jidx++) { // joint 0 is root
+                let jnt_name = "?";
+                if (this.model.name_jntadr[jidx] in this.model.DBG_name_index) {
+                jnt_name = this.model.DBG_name_index[this.model.name_jntadr[jidx]];
+                }
+                if (jnt_name == "root") {
+                continue;
+                }
+                let jnt_pos = this.simulation.qpos[this.model.jnt_qposadr[jidx]];
+                let jnt_vel = this.simulation.qvel[this.model.jnt_dofadr[jidx]];
+                let jnt_lower_lim = this.model.jnt_range[jidx*2];
+                let jnt_upper_lim = this.model.jnt_range[jidx*2+1];
+                // to joint observations (34,), assumes motor joints with 0 max vel
+                let jnt_mid_lim = (jnt_upper_lim + jnt_lower_lim) / 2;
+                let jnt_rel_pos = 2 * (jnt_pos - jnt_mid_lim) / (jnt_upper_lim - jnt_lower_lim);
+                qpos.push(jnt_pos);
+                qvel.push(jnt_vel);
+                qpos_rel.push(jnt_rel_pos);
+            }
+            // 2 feet contact values
+            // this.simulation.contact;
+            let is_left_foot_contact = 0;
+            let is_right_foot_contact = 0;
+            for (let i = 0; i < this.simulation.contact.length; i++) {
+                let contact = this.simulation.contact[i];
+                let geom1 = this.model.DBG_name_index[this.model.name_geomadr[contact.geom1]];
+                let geom2 = this.model.DBG_name_index[this.model.name_geomadr[contact.geom2]];
+                if ((geom1 == lfoot_name || geom2 == lfoot_name) && (geom1 == floor_name || geom2 == floor_name)) {
+                is_left_foot_contact = 1;
+                }
+                if ((geom1 == rfoot_name || geom2 == rfoot_name) && (geom1 == floor_name || geom2 == floor_name)) {
+                is_right_foot_contact = 1;
+                }
+                //console.log("Contact", i, "Geom1", geom1, "Geom2", geom2);
+            }
+            this.DBG_div_element.innerHTML += "<br>lfoot_contact: " + is_left_foot_contact + "<br>rfoot_contact: " + is_right_foot_contact;
 
-          if (ENV == "FLAGRUN") {
+            if (ENV == "FLAGRUN") {
+                obs.push(torso_xyz[2] - initial_z);
+                obs.push(Math.sin(angle_to_target));
+                obs.push(Math.cos(angle_to_target));
+                obs.push(0.3 * vx);
+                obs.push(0.3 * vy);
+                obs.push(0.3 * vz);
+                obs.push(torso_rpy[0]);
+                obs.push(torso_rpy[1]);
+                for (let i = 0; i < qpos_rel.length; i++) {
+                obs.push(qpos_rel[i]);
+                obs.push(qvel[i] * 0.1);
+                jnt_dbg.push(jnt_name + " " + jnt_rel_pos.toFixed(2) + " " + jnt_rel_vel.toFixed(2));
+                }
+                obs.push(is_right_foot_contact);
+                obs.push(is_left_foot_contact);
+                // clip obs to -5, 5
+                obs = obs.map(x => Math.min(5, Math.max(-5, x)));
+            } else if (ENV == "DEEP_MIMIC_HUMANOID") {
+                let S = 0.1;
+                for (let i = 0; i < qpos.length; i++) { obs.push(qpos[i]); }
+                for (let i = 0; i < qvel.length; i++) { obs.push(qvel[i] * S); }
+                // torso obs
+                obs.push(torso_rpy[0] * S);
+                obs.push(torso_rpy[1] * S);
+                obs.push(vx * S);
+                obs.push(vy * S);
+                obs.push(vz * S);
+                obs.push(torso_rotvel[0] * S);
+                obs.push(torso_rotvel[1] * S);
+                obs.push(torso_rotvel[2] * S);
+                // foot contacts
+                obs.push(is_right_foot_contact);
+                obs.push(is_left_foot_contact);
+            }
+
+            let a = this.policy.act(obs);
+
+            if (ENV == "FLAGRUN") {
+                for (let i = 0; i < a.length; i++) {
+                a[i] = Math.min(1.0, Math.max(-1.0, a[i] * 0.41));
+                }
+            } else if (ENV == "DEEP_MIMIC_HUMANOID") {
+                for (let i = 0; i < a.length; i++) {
+                a[i] = Math.min(0.5, Math.max(-0.5, a[i]));
+                }
+            }
+
+            // zero the control signal for debugging sim
+            if (ZEROACT) {
+                a = a.map(x => 0.0)
+            }
+            if (ONEACT) {
+                a = a.map(x => 1.0)
+            }
+
+            if (ACTOBS_LOG) {
+                this.DBG_actobs_log += "Frame " + this.DBG_actobs_log_frames + "\n";
+                this.DBG_actobs_log += "MJ time: " + this.mujoco_time.toFixed(3) + "\n";
+                this.DBG_actobs_log += "Obs: \n";
+                for (let i = 0; i < obs.length; i++) {
+                this.DBG_actobs_log += i.toString().padStart(2, '0') + ": " + obs[i].toFixed(3) + "\n";
+                }
+                this.DBG_actobs_log += "Act: \n";
+                for (let i = 0; i < a.length; i++) {
+                this.DBG_actobs_log += i.toString().padStart(2, '0') + ": " + a[i].toFixed(3) + "\n";
+                }
+                this.DBG_actobs_log += "\n";
+
+                this.DBG_actobs_qlog += this.simulation.time.toFixed(3) + ",";
+                this.DBG_actobs_qlog += obs.length + ",";
+                for (let i = 0; i < obs.length; i++) {
+                this.DBG_actobs_qlog += obs[i].toFixed(5) + ",";
+                }
+                this.DBG_actobs_qlog += a.length + ",";
+                for (let i = 0; i < a.length; i++) {
+                this.DBG_actobs_qlog += a[i].toFixed(5) + ",";
+                }
+                this.DBG_actobs_qlog += "1" + ",";
+                this.DBG_actobs_qlog += "0";
+                this.DBG_actobs_qlog += "\n";
+                this.DBG_actobs_log_frames += 1;
+                if (this.DBG_actobs_log_frames == 100) {
+                console.log(this.DBG_actobs_log);
+                console.log(this.DBG_actobs_qlog);
+                this.params["paused"] = true;
+                }
+            }
+
+            // Apply the control signal to the simulation
             for (let i = 0; i < a.length; i++) {
-              a[i] = Math.min(1.0, Math.max(-1.0, a[i] * 0.41));
+                this.simulation.ctrl[i] = a[i] * this.params["rlactscale"];
             }
-          } else if (ENV == "DEEP_MIMIC_HUMANOID") {
-            for (let i = 0; i < a.length; i++) {
-              a[i] = Math.min(0.5, Math.max(-0.5, a[i]));
             }
-          }
-
-          // zero the control signal for debugging sim
-          if (ZEROACT) {
-            a = a.map(x => 0.0)
-          }
-          if (ONEACT) {
-            a = a.map(x => 1.0)
-          }
-
-          if (ACTOBS_LOG) {
-            this.DBG_actobs_log += "Frame " + this.DBG_actobs_log_frames + "\n";
-            this.DBG_actobs_log += "MJ time: " + this.mujoco_time.toFixed(3) + "\n";
-            this.DBG_actobs_log += "Obs: \n";
-            for (let i = 0; i < obs.length; i++) {
-              this.DBG_actobs_log += i.toString().padStart(2, '0') + ": " + obs[i].toFixed(3) + "\n";
-            }
-            this.DBG_actobs_log += "Act: \n";
-            for (let i = 0; i < a.length; i++) {
-              this.DBG_actobs_log += i.toString().padStart(2, '0') + ": " + a[i].toFixed(3) + "\n";
-            }
-            this.DBG_actobs_log += "\n";
-
-            this.DBG_actobs_qlog += this.simulation.time.toFixed(3) + ",";
-            this.DBG_actobs_qlog += obs.length + ",";
-            for (let i = 0; i < obs.length; i++) {
-              this.DBG_actobs_qlog += obs[i].toFixed(5) + ",";
-            }
-            this.DBG_actobs_qlog += a.length + ",";
-            for (let i = 0; i < a.length; i++) {
-              this.DBG_actobs_qlog += a[i].toFixed(5) + ",";
-            }
-            this.DBG_actobs_qlog += "1" + ",";
-            this.DBG_actobs_qlog += "0";
-            this.DBG_actobs_qlog += "\n";
-            this.DBG_actobs_log_frames += 1;
-            if (this.DBG_actobs_log_frames == 100) {
-              console.log(this.DBG_actobs_log);
-              console.log(this.DBG_actobs_qlog);
-              this.params["paused"] = true;
-            }
-          }
-
-          // Apply the control signal to the simulation
-          for (let i = 0; i < a.length; i++) {
-            this.simulation.ctrl[i] = a[i] * this.params["rlactscale"];
-          }
         }
 
         for (let i = 0; i < repeat_iter; i++) {
