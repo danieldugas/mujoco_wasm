@@ -1,10 +1,11 @@
-
+// Legacy file, to be deleted
 import * as THREE           from 'three';
 import { GUI              } from '../node_modules/three/examples/jsm/libs/lil-gui.module.min.js';
 import { OrbitControls    } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { DragStateManager } from './utils/DragStateManager.js';
 import { setupGUI, downloadExampleScenesFolder, loadSceneFromURL, getPosition, getQuaternion, toMujocoPos, standardNormal } from './mujocoUtils.js';
 import   load_mujoco        from '../dist/mujoco_wasm.js';
+import { quat_to_rpy } from './transforms.js';
 import { SimpleReactivePolicy } from './policy.js';
 // import { ExtractedPolicy } from './extracted_policy.js';
 import { ExtractedPolicy } from './extracted_policy_walk_absurd_snow.js';
@@ -80,35 +81,19 @@ var mesh_names = [
     "right_five_link",
     "right_six_link",
 ]
-for (let i = 0; i < mesh_names.length; i++) {
-    mujoco.FS.writeFile("/working/assets/" + mesh_names[i] + ".obj", await(await fetch("./examples/scenes/assets/" + mesh_names[i] + ".obj")).text());
-    mujoco.FS.writeFile("/working/assets/" + mesh_names[i] + ".mtl", await(await fetch("./examples/scenes/assets/" + mesh_names[i] + ".mtl")).text());
-}
+// for (let i = 0; i < mesh_names.length; i++) {
+//     mujoco.FS.writeFile("/working/assets/" + mesh_names[i] + ".obj", await(await fetch("./examples/scenes/assets/" + mesh_names[i] + ".obj")).text());
+//     mujoco.FS.writeFile("/working/assets/" + mesh_names[i] + ".mtl", await(await fetch("./examples/scenes/assets/" + mesh_names[i] + ".mtl")).text());
+//     console.log("Loaded mesh", mesh_names[i]);
+// }
 // mujoco.FS.writeFile("/working/assets/" + "pelvis.obj", await(await fetch("./examples/scenes/assets/" + "pelvis.obj")).text());
 // mujoco.FS.writeFile("/working/assets/" + "pelvis_contour_link.obj", await(await fetch("./examples/scenes/assets/" + "pelvis_contour_link.obj")).text());
-  
-function quat_to_rpy(qw, qx, qy, qz) {
-    // same quat to rpy as in the deepmimic_mujoco env
-    let q0 = qw;
-    let q1 = qx;
-    let q2 = qy;
-    let q3 = qz;
-    let roll = Math.atan2(
-        2 * ((q2 * q3) + (q0 * q1)),
-        q0**2 - q1**2 - q2**2 + q3**2
-    ); // radians
-    let pitch = Math.asin(2 * ((q1 * q3) - (q0 * q2)));
-    let yaw = Math.atan2(
-        2 * ((q1 * q2) + (q0 * q3)),
-        q0**2 + q1**2 - q2**2 - q3**2
-    );
-    return [roll, pitch, yaw];
-  }
 
 
 export class MuJoCoDemo {
   constructor() {
     this.mujoco = mujoco;
+    this.init_complete = false;
 
     // Load in the state from XML
     this.model      = new mujoco.Model("/working/" + initialScene);
@@ -221,8 +206,26 @@ export class MuJoCoDemo {
   }
 
   async init() {
+    // Create a floating abs div for showing loading progress
+    let loadingDiv = document.createElement('div');
+    loadingDiv.style.position = 'absolute';
+    loadingDiv.style.top = '50%';
+    loadingDiv.style.left = '50%';
+    loadingDiv.style.transform = 'translate(-50%, -50%)';
+    loadingDiv.style.zIndex = '1000';
+    loadingDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    loadingDiv.style.color = 'white';
+    loadingDiv.style.padding = '20px';
+    loadingDiv.style.borderRadius = '10px';
+    loadingDiv.style.fontFamily = 'Arial';
+    loadingDiv.style.fontSize = '20px';
+    loadingDiv.innerHTML = 'Loading...';
+    document.body.appendChild(loadingDiv);
+
     // Download the the examples to MuJoCo's virtual file system
-    await downloadExampleScenesFolder(mujoco);
+    await downloadExampleScenesFolder(mujoco, loadingDiv);
+
+    loadingDiv.innerHTML = 'Initializing scene...';
 
     // Initialize the three.js Scene using the .xml Model in initialScene
     [this.model, this.state, this.simulation, this.bodies, this.lights] =  
@@ -232,6 +235,11 @@ export class MuJoCoDemo {
 
     this.gui = new GUI();
     setupGUI(this);
+
+    // Remove the loading div
+    document.body.removeChild(loadingDiv);
+
+    this.init_complete = true;
   }
 
   onWindowResize() {
@@ -241,6 +249,7 @@ export class MuJoCoDemo {
   }
 
   render(timeMS) {
+    if (!this.init_complete) { return; }
     this.controls.update();
 
     // check if simulation is initialized
@@ -569,6 +578,9 @@ export class MuJoCoDemo {
                     }
                     for (let i = 0; i < 14; i++) {
                         a.push(0.0);
+                    }
+                    for (let i = 0; i < a.length; i++) {
+                        a[i] = Math.min(this.model.actuator_ctrlrange[i*2+1], Math.max(this.model.actuator_ctrlrange[i*2], a[i]));
                     }
                 }
 

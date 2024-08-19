@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Reflector  } from './utils/Reflector.js';
-import { MuJoCoDemo } from './main.js';
+import { MuJoCoDemo } from './mujocoWebDemo.js';
 
 export async function reloadFunc() {
   // Delete the old scene and load the new scene
@@ -606,57 +606,216 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
 
 /** Downloads the scenes/examples folder to MuJoCo's virtual filesystem
  * @param {mujoco} mujoco */
-export async function downloadExampleScenesFolder(mujoco) {
+export async function downloadAnyScenesFolder(allFiles, mujoco, loading_div) {
+  let requests = allFiles.map((url) => fetch("./examples/scenes/" + url));
+  let responses = await Promise.all(requests);
+  for (let i = 0; i < responses.length; i++) {
+      let split = allFiles[i].split("/");
+      let working = '/working/';
+      for (let f = 0; f < split.length - 1; f++) {
+          working += split[f];
+          if (!mujoco.FS.analyzePath(working).exists) {
+            mujoco.FS.mkdir(working);
+            console.log("Created: " + working);
+          }
+          working += "/";
+      }
+
+      if (allFiles[i].endsWith(".png") || allFiles[i].endsWith(".stl") || allFiles[i].endsWith(".skn") || allFiles[i].endsWith(".STL")) {
+          mujoco.FS.writeFile("/working/" + allFiles[i], new Uint8Array(await responses[i].arrayBuffer()));
+      } else {
+          mujoco.FS.writeFile("/working/" + allFiles[i], await responses[i].text());
+      }
+      console.log("Downloaded: " + allFiles[i] + " to /working/" + allFiles[i]);
+      loading_div.innerHTML = "Loading meshes: " + (i + 1) + " / " + allFiles.length;
+  }
+  loading_div.innerHTML = "Finished loading meshes.";
+}
+
+/** Downloads the scenes/examples folder to MuJoCo's virtual filesystem
+ * @param {mujoco} mujoco */
+export async function downloadExampleScenesFolder(mujoco, loading_div) {
   let allFiles = [
-    "22_humanoids.xml",
-    "adhesion.xml",
-    "agility_cassie/assets/achilles-rod.obj",
-    "agility_cassie/assets/cassie-texture.png",
-    "agility_cassie/assets/foot-crank.obj",
-    "agility_cassie/assets/foot.obj",
-    "agility_cassie/assets/heel-spring.obj",
-    "agility_cassie/assets/hip-pitch.obj",
-    "agility_cassie/assets/hip-roll.obj",
-    "agility_cassie/assets/hip-yaw.obj",
-    "agility_cassie/assets/knee-spring.obj",
-    "agility_cassie/assets/knee.obj",
-    "agility_cassie/assets/pelvis.obj",
-    "agility_cassie/assets/plantar-rod.obj",
-    "agility_cassie/assets/shin.obj",
-    "agility_cassie/assets/tarsus.obj",
-    "agility_cassie/cassie.xml",
-    "agility_cassie/scene.xml",
-    "arm26.xml",
-    "balloons.xml",
-    "flag.xml",
-    "hammock.xml",
-    "humanoid.xml",
-    "humanoid_body.xml",
-    "mug.obj",
-    "mug.png",
-    "mug.xml",
-    "scene.xml",
-    "shadow_hand/assets/f_distal_pst.obj",
-    "shadow_hand/assets/f_knuckle.obj",
-    "shadow_hand/assets/f_middle.obj",
-    "shadow_hand/assets/f_proximal.obj",
-    "shadow_hand/assets/forearm_0.obj",
-    "shadow_hand/assets/forearm_1.obj",
-    "shadow_hand/assets/forearm_collision.obj",
-    "shadow_hand/assets/lf_metacarpal.obj",
-    "shadow_hand/assets/mounting_plate.obj",
-    "shadow_hand/assets/palm.obj",
-    "shadow_hand/assets/th_distal_pst.obj",
-    "shadow_hand/assets/th_middle.obj",
-    "shadow_hand/assets/th_proximal.obj",
-    "shadow_hand/assets/wrist.obj",
-    "shadow_hand/left_hand.xml",
-    "shadow_hand/right_hand.xml",
-    "shadow_hand/scene_left.xml",
-    "shadow_hand/scene_right.xml",
-    "simple.xml",
-    "slider_crank.xml",
-    "model_with_tendon.xml",
+    // "22_humanoids.xml",
+    // "adhesion.xml",
+    // "agility_cassie/assets/achilles-rod.obj",
+    // "agility_cassie/assets/cassie-texture.png",
+    // "agility_cassie/assets/foot-crank.obj",
+    // "agility_cassie/assets/foot.obj",
+    // "agility_cassie/assets/heel-spring.obj",
+    // "agility_cassie/assets/hip-pitch.obj",
+    // "agility_cassie/assets/hip-roll.obj",
+    // "agility_cassie/assets/hip-yaw.obj",
+    // "agility_cassie/assets/knee-spring.obj",
+    // "agility_cassie/assets/knee.obj",
+    // "agility_cassie/assets/pelvis.obj",
+    // "agility_cassie/assets/plantar-rod.obj",
+    // "agility_cassie/assets/shin.obj",
+    // "agility_cassie/assets/tarsus.obj",
+    // "agility_cassie/cassie.xml",
+    // "agility_cassie/scene.xml",
+    // "arm26.xml",
+    // "balloons.xml",
+    // "flag.xml",
+    // "hammock.xml",
+    // "humanoid.xml",
+    // "humanoid_body.xml",
+    // "mug.obj",
+    // "mug.png",
+    // "mug.xml",
+    // "scene.xml",
+    // "shadow_hand/assets/f_distal_pst.obj",
+    // "shadow_hand/assets/f_knuckle.obj",
+    // "shadow_hand/assets/f_middle.obj",
+    // "shadow_hand/assets/f_proximal.obj",
+    // "shadow_hand/assets/forearm_0.obj",
+    // "shadow_hand/assets/forearm_1.obj",
+    // "shadow_hand/assets/forearm_collision.obj",
+    // "shadow_hand/assets/lf_metacarpal.obj",
+    // "shadow_hand/assets/mounting_plate.obj",
+    // "shadow_hand/assets/palm.obj",
+    // "shadow_hand/assets/th_distal_pst.obj",
+    // "shadow_hand/assets/th_middle.obj",
+    // "shadow_hand/assets/th_proximal.obj",
+    // "shadow_hand/assets/wrist.obj",
+    // "shadow_hand/left_hand.xml",
+    // "shadow_hand/right_hand.xml",
+    // "shadow_hand/scene_left.xml",
+    // "shadow_hand/scene_right.xml",
+    // "simple.xml",
+    // "slider_crank.xml",
+    // "model_with_tendon.xml",
+    // -------
+    "assets/pelvis.obj",
+    "assets/pelvis_contour_link.obj",
+    "assets/left_hip_pitch_link.obj",
+    "assets/left_hip_roll_link.obj",
+    "assets/left_hip_yaw_link.obj",
+    "assets/left_knee_link.obj",
+    "assets/left_ankle_pitch_link.obj",
+    "assets/left_ankle_roll_link.obj",
+    "assets/right_hip_pitch_link.obj",
+    "assets/right_hip_roll_link.obj",
+    "assets/right_hip_yaw_link.obj",
+    "assets/right_knee_link.obj",
+    "assets/right_ankle_pitch_link.obj",
+    "assets/right_ankle_roll_link.obj",
+    "assets/torso_link.obj",
+    "assets/head_link.obj",
+    "assets/left_shoulder_pitch_link.obj",
+    "assets/left_shoulder_roll_link.obj",
+    "assets/left_shoulder_yaw_link.obj",
+    "assets/left_elbow_pitch_link.obj",
+    "assets/left_elbow_roll_link.obj",
+    "assets/right_shoulder_pitch_link.obj",
+    "assets/right_shoulder_roll_link.obj",
+    "assets/right_shoulder_yaw_link.obj",
+    "assets/right_elbow_pitch_link.obj",
+    "assets/right_elbow_roll_link.obj",
+    "assets/logo_link.obj",
+    "assets/left_palm_link.obj",
+    "assets/left_zero_link.obj",
+    "assets/left_one_link.obj",
+    "assets/left_two_link.obj",
+    "assets/left_three_link.obj",
+    "assets/left_four_link.obj",
+    "assets/left_five_link.obj",
+    "assets/left_six_link.obj",
+    "assets/right_palm_link.obj",
+    "assets/right_zero_link.obj",
+    "assets/right_one_link.obj",
+    "assets/right_two_link.obj",
+    "assets/right_three_link.obj",
+    "assets/right_four_link.obj",
+    "assets/right_five_link.obj",
+    "assets/right_six_link.obj",
+    "assets/pelvis.mtl",
+    "assets/pelvis_contour_link.mtl",
+    "assets/left_hip_pitch_link.mtl",
+    "assets/left_hip_roll_link.mtl",
+    "assets/left_hip_yaw_link.mtl",
+    "assets/left_knee_link.mtl",
+    "assets/left_ankle_pitch_link.mtl",
+    "assets/left_ankle_roll_link.mtl",
+    "assets/right_hip_pitch_link.mtl",
+    "assets/right_hip_roll_link.mtl",
+    "assets/right_hip_yaw_link.mtl",
+    "assets/right_knee_link.mtl",
+    "assets/right_ankle_pitch_link.mtl",
+    "assets/right_ankle_roll_link.mtl",
+    "assets/torso_link.mtl",
+    "assets/head_link.mtl",
+    "assets/left_shoulder_pitch_link.mtl",
+    "assets/left_shoulder_roll_link.mtl",
+    "assets/left_shoulder_yaw_link.mtl",
+    "assets/left_elbow_pitch_link.mtl",
+    "assets/left_elbow_roll_link.mtl",
+    "assets/right_shoulder_pitch_link.mtl",
+    "assets/right_shoulder_roll_link.mtl",
+    "assets/right_shoulder_yaw_link.mtl",
+    "assets/right_elbow_pitch_link.mtl",
+    "assets/right_elbow_roll_link.mtl",
+    "assets/logo_link.mtl",
+    "assets/left_palm_link.mtl",
+    "assets/left_zero_link.mtl",
+    "assets/left_one_link.mtl",
+    "assets/left_two_link.mtl",
+    "assets/left_three_link.mtl",
+    "assets/left_four_link.mtl",
+    "assets/left_five_link.mtl",
+    "assets/left_six_link.mtl",
+    "assets/right_palm_link.mtl",
+    "assets/right_zero_link.mtl",
+    "assets/right_one_link.mtl",
+    "assets/right_two_link.mtl",
+    "assets/right_three_link.mtl",
+    "assets/right_four_link.mtl",
+    "assets/right_five_link.mtl",
+    "assets/right_six_link.mtl",
+    // -----
+    // "assets/pelvis.STL",
+    // "assets/pelvis_contour_link.STL",
+    // "assets/left_hip_pitch_link.STL",
+    // "assets/left_hip_roll_link.STL",
+    // "assets/left_hip_yaw_link.STL",
+    // "assets/left_knee_link.STL",
+    // "assets/left_ankle_pitch_link.STL",
+    // "assets/left_ankle_roll_link.STL",
+    // "assets/right_hip_pitch_link.STL",
+    // "assets/right_hip_roll_link.STL",
+    // "assets/right_hip_yaw_link.STL",
+    // "assets/right_knee_link.STL",
+    // "assets/right_ankle_pitch_link.STL",
+    // "assets/right_ankle_roll_link.STL",
+    // "assets/torso_link.STL",
+    // "assets/head_link.STL",
+    // "assets/left_shoulder_pitch_link.STL",
+    // "assets/left_shoulder_roll_link.STL",
+    // "assets/left_shoulder_yaw_link.STL",
+    // "assets/left_elbow_pitch_link.STL",
+    // "assets/left_elbow_roll_link.STL",
+    // "assets/right_shoulder_pitch_link.STL",
+    // "assets/right_shoulder_roll_link.STL",
+    // "assets/right_shoulder_yaw_link.STL",
+    // "assets/right_elbow_pitch_link.STL",
+    // "assets/right_elbow_roll_link.STL",
+    // "assets/logo_link.STL",
+    // "assets/left_palm_link.STL",
+    // "assets/left_zero_link.STL",
+    // "assets/left_one_link.STL",
+    // "assets/left_two_link.STL",
+    // "assets/left_three_link.STL",
+    // "assets/left_four_link.STL",
+    // "assets/left_five_link.STL",
+    // "assets/left_six_link.STL",
+    // "assets/right_palm_link.STL",
+    // "assets/right_zero_link.STL",
+    // "assets/right_one_link.STL",
+    // "assets/right_two_link.STL",
+    // "assets/right_three_link.STL",
+    // "assets/right_four_link.STL",
+    // "assets/right_five_link.STL",
+    // "assets/right_six_link.STL"
   ];
 
   let requests = allFiles.map((url) => fetch("./examples/scenes/" + url));
@@ -666,16 +825,22 @@ export async function downloadExampleScenesFolder(mujoco) {
       let working = '/working/';
       for (let f = 0; f < split.length - 1; f++) {
           working += split[f];
-          if (!mujoco.FS.analyzePath(working).exists) { mujoco.FS.mkdir(working); }
+          if (!mujoco.FS.analyzePath(working).exists) {
+            mujoco.FS.mkdir(working);
+            console.log("Created: " + working);
+          }
           working += "/";
       }
 
-      if (allFiles[i].endsWith(".png") || allFiles[i].endsWith(".stl") || allFiles[i].endsWith(".skn")) {
+      if (allFiles[i].endsWith(".png") || allFiles[i].endsWith(".stl") || allFiles[i].endsWith(".skn") || allFiles[i].endsWith(".STL")) {
           mujoco.FS.writeFile("/working/" + allFiles[i], new Uint8Array(await responses[i].arrayBuffer()));
       } else {
           mujoco.FS.writeFile("/working/" + allFiles[i], await responses[i].text());
       }
+      console.log("Downloaded: " + allFiles[i] + " to /working/" + allFiles[i]);
+      loading_div.innerHTML = "Loading meshes: " + (i + 1) + " / " + allFiles.length;
   }
+  loading_div.innerHTML = "Finished loading meshes.";
 }
 
 /** Access the vector at index, swizzle for three.js, and apply to the target THREE.Vector3
