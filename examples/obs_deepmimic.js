@@ -4,6 +4,11 @@ import { quat_to_rpy } from './transforms.js';
 
 /** @param {MuJoCoDemo} mjd*/
 export function getDeepmimicObs(mjd, policy, ENV, ACTOBS_LOG, ZEROACT, ONEACT) {
+    let N_FRAMES = 100;
+    // ONEACT = true; 
+    // N_FRAMES = 5;
+    // ACTOBS_LOG = true;
+
     let timestep = mjd.model.getOptions().timestep;
     let target_xyz = [14.0, 0.0, 1.3];
     let initial_z = 0.8; // from flagrun
@@ -213,7 +218,7 @@ export function getDeepmimicObs(mjd, policy, ENV, ACTOBS_LOG, ZEROACT, ONEACT) {
         mjd.DBG_actobs_qlog += "0";
         mjd.DBG_actobs_qlog += "\n";
         mjd.DBG_actobs_log_frames += 1;
-        if (mjd.DBG_actobs_log_frames == 100) {
+        if (mjd.DBG_actobs_log_frames == N_FRAMES) {
         console.log(mjd.DBG_actobs_log);
         console.log(mjd.DBG_actobs_qlog);
         mjd.params["paused"] = true;
@@ -230,6 +235,47 @@ export function getDeepmimicObs(mjd, policy, ENV, ACTOBS_LOG, ZEROACT, ONEACT) {
         }
         for (let i = 0; i < a.length; i++) {
             a[i] = Math.min(mjd.model.actuator_ctrlrange[i*2+1], Math.max(mjd.model.actuator_ctrlrange[i*2], a[i]));
+        }
+    }
+
+    if (false) {
+        // if mean_z is below 0.4, add a div with red text that says "WASTED"
+        if (mean_xyz[2] < 0.4) {
+            if (mjd.WASTED_DIV) {
+                // make background progressively darker
+                let wastedDiv = mjd.WASTED_DIV;
+                let wastedDivColor = wastedDiv.style.backgroundColor;
+                let wastedDivColorParts = wastedDivColor.split(",");
+                let wastedDivAlpha = parseFloat(wastedDivColorParts[3].split(")")[0]);
+                wastedDivAlpha = Math.min(0.6, wastedDivAlpha + 0.01);
+                wastedDiv.style.backgroundColor = "rgba(0, 0, 0, " + wastedDivAlpha + ")";
+            } else {
+                let wastedDiv = document.createElement("div");
+                // create text element in the middle of div
+                let text = document.createElement("p");
+                text.innerHTML = "WASTED";
+                text.style.color = "red";
+                text.style.fontSize = "100px";
+                wastedDiv.appendChild(text);
+                wastedDiv.style.display = "flex";
+                wastedDiv.style.justifyContent = "center";
+                wastedDiv.style.alignItems = "center";
+                wastedDiv.style.position = "absolute";
+                wastedDiv.style.top = "50%";
+                wastedDiv.style.left = "50%";
+                wastedDiv.style.transform = "translate(-50%, -50%)";
+                wastedDiv.style.color = "red";
+                wastedDiv.style.backgroundColor = "rgba(255, 255, 255, 0.0)";
+                wastedDiv.style.width = "100%";
+                wastedDiv.style.height = "100%";
+                document.body.appendChild(wastedDiv);
+                mjd.WASTED_DIV = wastedDiv;
+            }
+        } else {
+            if (mjd.WASTED_DIV) {
+                document.body.removeChild(mjd.WASTED_DIV);
+                mjd.WASTED_DIV = null;
+            }
         }
     }
 

@@ -182,6 +182,16 @@ export function setupGUI(parentContext) {
 
   let simulationFolder = parentContext.gui.addFolder("Simulation");
 
+  // Add gravity checkbox
+  // const gravity = simulationFolder.add(parentContext.params, 'gravity').name('Gravity');
+  // gravity.onChange((value) => {
+  //   parentContext.model.opt.gravity[2] = value ? -9.81 : 0;
+  //   parentContext.simulation.set_model(parentContext.model);
+  // });
+
+  // Add RL policy checkbox
+  const rlPolicy = simulationFolder.add(parentContext.params, 'policy_enabled').name('RL Policy Enabled');
+
   // Add pause simulation checkbox.
   // Parameters:
   //  Under "Simulation" folder.
@@ -212,6 +222,13 @@ export function setupGUI(parentContext) {
   });
   actionInnerHTML += 'Play / Pause<br>';
   keyInnerHTML += 'Space<br>';
+
+  // Add step once button.
+  const stepOnce = () => {
+    parentContext.flag_step_once = true;
+    parentContext.params.paused = false;
+  };
+  simulationFolder.add({step: () => { stepOnce(); }}, 'step').name('Step Once');
 
   // Add reload model button.
   // Parameters:

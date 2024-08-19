@@ -9,31 +9,13 @@ import   load_mujoco        from '../dist/mujoco_wasm.js';
 // Load the MuJoCo Module
 const mujoco = await load_mujoco();
 
-function quat_to_rpy(qw, qx, qy, qz) {
-    // same quat to rpy as in the deepmimic_mujoco env
-    let q0 = qw;
-    let q1 = qx;
-    let q2 = qy;
-    let q3 = qz;
-    let roll = Math.atan2(
-        2 * ((q2 * q3) + (q0 * q1)),
-        q0**2 - q1**2 - q2**2 + q3**2
-    ); // radians
-    let pitch = Math.asin(2 * ((q1 * q3) - (q0 * q2)));
-    let yaw = Math.atan2(
-        2 * ((q1 * q2) + (q0 * q3)),
-        q0**2 + q1**2 - q2**2 - q3**2
-    );
-    return [roll, pitch, yaw];
-  }
-
-
 export class MuJoCoDemo {
   constructor(initialScene="humanoid_deep_mimic.xml", repeat_iter=1) {
     this.initialScene = initialScene;
     this.repeat_iter = repeat_iter;
     this.mujoco = mujoco;
     this.init_complete = false;
+    this.flag_step_once = false;
 
     this.sceneLoaderCallback = null;
     this.mocapInitCallback = null;
@@ -52,7 +34,8 @@ export class MuJoCoDemo {
     this.DBG_actobs_log_frames = 0;
 
     // Define Random State Variables
-    this.params = { scene: this.initialScene, paused: false, help: false, ctrlnoiserate: 0.0, ctrlnoisestd: 0.0, rlactscale: 1.0, keyframeNumber: 0 };
+    this.params = { scene: this.initialScene, paused: false, help: false, ctrlnoiserate: 0.0, ctrlnoisestd: 0.0, rlactscale: 1.0,
+      keyframeNumber: 0, gravity: true, policy_enabled: true };
     this.mujoco_time = 0.0;
     this.bodies  = {}, this.lights = {};
     this.tmpVec  = new THREE.Vector3();
@@ -236,13 +219,21 @@ export class MuJoCoDemo {
         }
         
         // call environment obs and act functions
-        if (this.obsAndActCallback) {
-          this.obsAndActCallback(this);
+        if (this.params["policy_enabled"]) {
+          if (this.obsAndActCallback) {
+            this.obsAndActCallback(this);
+          }
         }
 
         for (let i = 0; i < this.repeat_iter; i++) {
           this.simulation.step();
           this.mujoco_time += timestep * 1000.0;
+        }
+
+        // Pause if the user has requested a single step.
+        if (this.flag_step_once) {
+          this.params["paused"] = true;
+          this.flag_step_once = false;
         }
 
       }
