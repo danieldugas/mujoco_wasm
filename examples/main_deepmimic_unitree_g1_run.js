@@ -3,7 +3,7 @@ import { downloadAnyScenesFolder } from './mujocoUtils.js';
 import { ExtractedPolicy } from './extracted_policy_run_polar_breeze.js';
 import { getDeepmimicObs } from './obs_deepmimic.js';
 
-let scene_file = 'deepmimic_unitree_g1.xml';
+let scene_file = 'deepmimic_unitree_g1_nocolmesh.xml'; // something is wrong with obj collision meshes, disabled for running
 let policy = new ExtractedPolicy();
 policy.test();
 
@@ -137,4 +137,8 @@ let mujocoDemo = new MuJoCoDemo(scene_file);
 mujocoDemo.sceneLoaderCallback = downloadUnitreeG1;
 mujocoDemo.mocapInitCallback = initMocapFrame;
 mujocoDemo.obsAndActCallback = obsAndActCallback;
+// set default camera position
+mujocoDemo.camera.position.set(-2.0, 1.7, 1.2);
+mujocoDemo.controls.target.set(0, 1.2, 1.0);
+mujocoDemo.controls.update(); 
 await mujocoDemo.init();
